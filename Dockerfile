@@ -1,57 +1,96 @@
-#
-# Geckodriver Dockerfile
-#
+FROM debian:13-slim AS base
 
-FROM blueimp/basedriver
+LABEL org.opencontainers.image.description="Base image for running and debugging webdriver implementations"
 
-# Install the latest version of Firefox:
+# Install the base requirements to run and debug webdriver implementations:
 RUN export DEBIAN_FRONTEND=noninteractive \
   && apt-get update \
+  && apt-get dist-upgrade -y \
   && apt-get install --no-install-recommends --no-install-suggests -y \
-    # Firefox dependencies:
-    libgtk-3-0 \
-    libdbus-glib-1-2 \
-    # Bzip2 to extract the Firefox tarball:
-    bzip2 \
-    # Reverse proxy for geckodriver:
-    nginx \
-  && DL='https://download.mozilla.org/?product=firefox-latest-ssl&os=linux64' \
-  && curl -sL "$DL" | tar -xj -C /opt \
-  && ln -s /opt/firefox/firefox /usr/local/bin/ \
+    xvfb \
+    xauth \
+    ca-certificates \
+    x11vnc \
+    fluxbox \
+    rxvt-unicode \
+    curl \
+    tini \
+    gpg \
   # Remove obsolete files:
-  && apt-get autoremove --purge -y \
-    bzip2 \
   && apt-get clean \
   && rm -rf \
-    /tmp/* \
+    /usr/share/doc/* \
+    /var/cache/* \
+    /var/lib/apt/lists/* \
+    /var/tmp/*
+
+# Patch xvfb-run to support TCP port listening (disabled by default):
+RUN sed -i 's/LISTENTCP=""/LISTENTCP="-listen tcp"/' /usr/bin/xvfb-run
+
+# Avoid permission issues with host mounts by assigning a user/group with
+# uid/gid 1000 (usually the ID of the first user account on GNU/Linux):
+RUN useradd -u 1000 -m -U webdriver
+
+WORKDIR /home/webdriver
+
+COPY entrypoint.sh /usr/local/bin/entrypoint
+COPY vnc-start.sh /usr/local/bin/vnc-start
+
+# Configure Xvfb via environment variables:
+ENV SCREEN_WIDTH=1440
+ENV SCREEN_HEIGHT=900
+ENV SCREEN_DEPTH=24
+ENV DISPLAY=:0
+
+ENTRYPOINT ["entrypoint"]
+
+################################################################################
+
+FROM base
+
+ARG FINGERPRINT=35BAA0B33E9EB396F59CA838C0BA5CE6DC6315A3
+ARG TARGETPLATFORM
+
+# Install Cloudflare Bypass FastAPI
+ADD https://github.com/atta-1/cfbypass.git /home/webdriver/cfbypass
+
+# Install Camoufox (special version of Firefox)
+RUN export DEBIAN_FRONTEND=noninteractive \
+  && apt-get update \
+  && apt-get install -y python3 pip python3-venv libgtk-3-0 libx11-xcb1 libasound2 \
+  && cd cfbypass \
+  && python3 -m venv .venv \
+  && .venv/bin/pip install -r requirements.txt \
+  && .venv/bin/python -m camoufox fetch \
+  && apt-get clean \
+  && rm -rf \
     /usr/share/doc/* \
     /var/cache/* \
     /var/lib/apt/lists/* \
     /var/tmp/*
 
 # Install the latest version of Geckodriver:
-RUN BASE_URL=https://github.com/mozilla/geckodriver/releases/download \
-  && VERSION=$(curl -sL \
-    https://api.github.com/repos/mozilla/geckodriver/releases/latest | \
-    grep tag_name | cut -d '"' -f 4) \
-  && curl -sL "$BASE_URL/$VERSION/geckodriver-$VERSION-linux64.tar.gz" | \
-    tar -xz -C /usr/local/bin
-
-# Configure nginx to run in a container context:
-RUN ln -sf /dev/stdout /var/log/nginx/access.log
-RUN ln -sf /dev/stderr /var/log/nginx/error.log
-RUN chown -R webdriver:webdriver /var/lib/nginx
-RUN touch /run/nginx.pid && chown -R webdriver:webdriver /run/nginx.pid
-
-COPY nginx.conf /etc/nginx/
-COPY reverse-proxy.sh /usr/local/bin/reverse-proxy
+RUN export DEBIAN_FRONTEND=noninteractive \
+  && apt update \
+  && apt install --no-install-recommends --no-install-suggests -y jq \
+  && ARCH=$([ "$TARGETPLATFORM" = "linux/arm64" ] && echo "aarch64" || echo "linux64") \
+  && BASE_URL=https://github.com/mozilla/geckodriver/releases/download \
+  && VERSION=$(curl -sL https://api.github.com/repos/mozilla/geckodriver/releases/latest | jq | grep tag_name | cut -d '"' -f 4) \
+  && curl -sL -vvv "$BASE_URL/$VERSION/geckodriver-$VERSION-linux-$ARCH.tar.gz" | tar -xz -C /usr/local/bin \
+  && apt-get remove -y jq \
+  && apt-get clean \
+  && rm -rf \
+    /usr/share/doc/* \
+    /var/cache/* \
+    /var/lib/apt/lists/* \
+    /var/tmp/*
 
 USER webdriver
 
-ENTRYPOINT ["entrypoint", "reverse-proxy", "geckodriver"]
+ENTRYPOINT ["entrypoint", "geckodriver"]
 
-# Bind geckodriver to port 5555:
-CMD ["--port", "5555"]
+CMD ["--port", "4444"]
 
-# Expose nginx on port 4444, forwarding to geckodriver on port 5555:
 EXPOSE 4444
+EXPOSE 5900
+EXPOSE 8000

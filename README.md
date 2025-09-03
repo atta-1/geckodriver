@@ -58,7 +58,7 @@ might break your tests inadvertently. For example:
 version: "3.7"
 services:
   geckodriver:
-    image: YOUR_ORG/geckodriver:2021-09-27
+    image: ghcr.io/atta-1/geckodriver:2021-09-27
     # ...
 ```
 
@@ -67,8 +67,10 @@ For full control, you should also set up a build for your own version of
 image reference at the start of the `Dockerfile` in this repository accordingly,
 e.g.:
 
-```Dockerfile
-FROM YOUR_ORG/basedriver:2021-09-27
+## Build
+
+```shell
+docker buildx build --platform linux/amd64,linux/arm64 --secret id=GIT_AUTH_TOKEN --push -t ghcr.io/atta-1/geckodriver:camoufox .
 ```
 
 ## Software
