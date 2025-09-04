@@ -29,7 +29,7 @@ RUN sed -i 's/LISTENTCP=""/LISTENTCP="-listen tcp"/' /usr/bin/xvfb-run
 
 # Avoid permission issues with host mounts by assigning a user/group with
 # uid/gid 1000 (usually the ID of the first user account on GNU/Linux):
-RUN useradd -u 1000 -m -U webdriver
+RUN useradd -u 1000 -m -U webdriver -d /home/webdriver -s /bin/bash
 
 WORKDIR /home/webdriver
 
@@ -58,10 +58,7 @@ ADD https://github.com/atta-1/cfbypass.git /home/webdriver/cfbypass
 RUN export DEBIAN_FRONTEND=noninteractive \
   && apt-get update \
   && apt-get install -y python3 pip python3-venv libgtk-3-0 libx11-xcb1 libasound2 \
-  && cd cfbypass \
-  && python3 -m venv .venv \
-  && .venv/bin/pip install -r requirements.txt \
-  && .venv/bin/python -m camoufox fetch \
+  && chown -R webdriver: cfbypass \
   && apt-get clean \
   && rm -rf \
     /usr/share/doc/* \
@@ -73,10 +70,10 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 RUN export DEBIAN_FRONTEND=noninteractive \
   && apt update \
   && apt install --no-install-recommends --no-install-suggests -y jq \
-  && ARCH=$([ "$TARGETPLATFORM" = "linux/arm64" ] && echo "aarch64" || echo "linux64") \
+  && ARCH=$([ "$TARGETPLATFORM" = "linux/arm64" ] && echo "-aarch64" || echo "64") \
   && BASE_URL=https://github.com/mozilla/geckodriver/releases/download \
   && VERSION=$(curl -sL https://api.github.com/repos/mozilla/geckodriver/releases/latest | jq | grep tag_name | cut -d '"' -f 4) \
-  && curl -sL -vvv "$BASE_URL/$VERSION/geckodriver-$VERSION-linux-$ARCH.tar.gz" | tar -xz -C /usr/local/bin \
+  && curl -sL "$BASE_URL/$VERSION/geckodriver-$VERSION-linux$ARCH.tar.gz" | tar -xz -C /usr/local/bin \
   && apt-get remove -y jq \
   && apt-get clean \
   && rm -rf \
@@ -86,6 +83,11 @@ RUN export DEBIAN_FRONTEND=noninteractive \
     /var/tmp/*
 
 USER webdriver
+
+RUN cd cfbypass \
+    && python3 -m venv .venv \
+    && .venv/bin/pip install -r requirements.txt \
+    && .venv/bin/python -m camoufox fetch
 
 ENTRYPOINT ["entrypoint", "geckodriver"]
 
