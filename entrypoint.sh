@@ -12,7 +12,7 @@ if [ "$EXPOSE_X11" = true ]; then
   set -- --listen-tcp "$@"
 fi
 
-DISPLAY=${DISPLAY:-0}
+DISPLAY=${DISPLAY:-:0}
 
 # 6000+SERVERNUM is the TCP port Xvfb is listening on:
 SERVERNUM=$(echo "$DISPLAY" | sed 's/:\([0-9][0-9]*\).*/\1/')
