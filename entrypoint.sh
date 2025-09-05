@@ -20,7 +20,7 @@ SERVERNUM=$(echo "$DISPLAY" | sed 's/:\([0-9][0-9]*\).*/\1/')
 # Options passed directly to the Xvfb server:
 # -ac disables host-based access control mechanisms
 # −screen NUM WxHxD creates the screen and sets its width, height, and depth
-SERVERARGS="-ac -screen $DISPLAY ${SCREEN_WIDTH}x${SCREEN_HEIGHT}x${SCREEN_DEPTH} -nolisten tcp -extension RENDER +extension GLX -extension COMPOSITE -extension XVideo -extension XVideo-MotionCompensation -extension XINERAMA -shmem -fp built-ins -nocursor -br"
+SERVERARGS="-ac -screen 0 ${SCREEN_WIDTH}x${SCREEN_HEIGHT}x${SCREEN_DEPTH} -nolisten tcp -extension RENDER +extension GLX -extension COMPOSITE -extension XVideo -extension XVideo-MotionCompensation -extension XINERAMA -shmem -fp built-ins -nocursor -br"
 
 /home/webdriver/cfbypass/.venv/bin/python /home/webdriver/cfbypass/main.py &
 
