@@ -70,6 +70,7 @@ e.g.:
 ## Build
 
 ```shell
+export GIT_AUTH_TOKEN=...
 docker buildx build --platform linux/amd64,linux/arm64 --secret id=GIT_AUTH_TOKEN --push -t ghcr.io/atta-1/geckodriver:camoufox .
 ```
 
