@@ -85,6 +85,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 USER webdriver
 
 RUN cd cfbypass \
+    && git checkout schneider \
     && python3 -m venv .venv \
     && .venv/bin/pip install -r requirements.txt \
     && .venv/bin/python -m camoufox fetch
