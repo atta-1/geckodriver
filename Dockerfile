@@ -52,7 +52,7 @@ ARG FINGERPRINT=35BAA0B33E9EB396F59CA838C0BA5CE6DC6315A3
 ARG TARGETPLATFORM
 
 # Install Cloudflare Bypass FastAPI
-ADD https://github.com/atta-1/cfbypass.git /home/webdriver/cfbypass
+ADD https://github.com/atta-1/cfbypass.git#eval /home/webdriver/cfbypass
 
 # Install Camoufox (special version of Firefox)
 RUN export DEBIAN_FRONTEND=noninteractive \
@@ -85,7 +85,6 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 USER webdriver
 
 RUN cd cfbypass \
-    && git checkout eval \
     && python3 -m venv .venv \
     && .venv/bin/pip install -r requirements.txt \
     && .venv/bin/python -m camoufox fetch
